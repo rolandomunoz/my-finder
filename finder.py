@@ -148,7 +148,8 @@ class Finder(tk.Frame):
     deepSearch = self.index_deepSearch.get()
     fileSearch = self.index_fileSearch.get()
     folderSearch = self.index_folderSearch.get()
-    
+
+    folderName = os.path.basename(path)    
     path = os.path.join(path, '**') if deepSearch else os.path.join(path, '*')
     path = os.path.normpath(path)
   
@@ -166,7 +167,8 @@ class Finder(tk.Frame):
         self.index_db[fbasename].append(f)
       else:
         self.index_db[fbasename] = [f]
-    self.index_exist.set('Status: created from ' + path)
+
+    self.index_exist.set('Status: created from ' + folderName)
     ## Actions
     # Active Search button
     self.notebook.tab(1, state = 'normal')
