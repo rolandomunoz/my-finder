@@ -6,9 +6,8 @@ import subprocess
 import csv
 import shutil
 import os
-import glob
-import fnmatch
 import platform
+import finder
 
 class Finder(tk.Frame):
   
@@ -17,6 +16,7 @@ class Finder(tk.Frame):
     self.master = master
     self.app_config()
     self.create_widgets()
+    self.finder = finder.FileIndex()
     
   def app_config(self):
     self.master.title('Finder-MP')
@@ -61,7 +61,7 @@ class Finder(tk.Frame):
 
     text.insert(tk.END, '\nCreado por Rolando Muñoz Aramburú (rolando.muar@gmail.com)\n', ('info'))    
     text.insert(tk.END, 'Fecha de creación: 10 de octubre de 2019\n', ('info'))
-    text.insert(tk.END, 'Última actualización: 21 de marzo de 2020\n', ('info'))
+    text.insert(tk.END, 'Última actualización: 5 de agosto de 2020\n', ('info'))
 
     text.tag_configure('title', foreground='red', font =('Helvetica', 12), underline = True, justify = tk.CENTER)
     text.tag_configure('softwareName', foreground = 'blue', font =('Helvetica', 24), justify = tk.CENTER)
@@ -78,20 +78,19 @@ class Finder(tk.Frame):
     self.index_fileSearch = tk.BooleanVar()
     self.index_folderSearch = tk.BooleanVar()
     self.index_exist = tk.StringVar()
-    self.index_exist.set('Status: Unavailable')
+    self.index_exist.set('Status: None')
     self.index_fileSearch.set(1)
-    self.index_deepSearch.set(1)
-    
+    self.index_deepSearch.set(True)
     frame.grid_columnconfigure(0, weight= 1)  
     
     #Widgets
     labelField = tk.Label(frame, text = 'Create index from the following directory:')
     entryPath = tk.Entry(frame, width = 80, textvariable = self.index_path)
     buttonBrowse = tk.Button(frame, text = '...', width = int(buttonWidth*0.2), command = self._selectDirectory)
-    checkDeepSearch = tk.Checkbutton(frame, text="Sub-folders as well", state = tk.DISABLED, variable= self.index_deepSearch)
+    checkDeepSearch = tk.Checkbutton(frame, text="Sub-folders as well", variable= self.index_deepSearch)
     checkFileSearch = tk.Checkbutton(frame, text="Index file names", state = tk.DISABLED, variable= self.index_fileSearch)
     checkFolderSearch = tk.Checkbutton(frame, text="Index folder names", state = tk.DISABLED,variable= self.index_folderSearch)
-    buttonCreateIndex = tk.Button(frame, text = 'Create Index', width = buttonWidth, command = self.createIndex)
+    buttonCreateIndex = tk.Button(frame, text = 'Create Index', width = buttonWidth, command = self.create_file_index)
     statusBar = tk.Label(frame, bd = 1, relief = tk.SUNKEN, textvariable = self.index_exist, anchor= tk.W)
     
     # Layout
@@ -103,13 +102,7 @@ class Finder(tk.Frame):
     checkFolderSearch.grid(column = 0, row = 4, sticky = tk.W)
     buttonCreateIndex.grid(column = 0, row = 5)
     statusBar.grid(column = 0, columnspan = 2, row = 6, sticky = tk.W + tk.E)
-
-    # Bind
-    #frame.bind('<Control-i>', lambda event:self.run())
-    
-  def run(self):
-    self.createIndex()
-    
+  
   def create_search_window(self, frame):
     buttonWidth = 10
     # Widgets
@@ -126,59 +119,37 @@ class Finder(tk.Frame):
     path = tk.filedialog.askdirectory()
     self.index_path.set(path)
   
-  def _getQueryList(self):
-    patternText = self.searchWindow_text.get('1.0', 'end-1c')
-    return patternText.split('\n')
+  def _get_query_list(self):
+    pattern_text = self.searchWindow_text.get('1.0', 'end-1c')
+    return pattern_text.split('\n')
     
   def search(self):
-    queryList= self._getQueryList()
-    
-    self.searchResults = list()
-    for query in queryList:
-      matchedKeyList = fnmatch.filter(self.index_db.keys(), query)
-      fileList = [filePath for matchedKey in matchedKeyList for filePath in self.index_db[matchedKey]]        
-      resultTuple = (query, fileList)
-      self.searchResults.append(resultTuple)
-      
+    query_list = self._get_query_list()
+    query_results = self.finder.find_paths_by_pattern_list(query_list)
     # Show results in View window
-    viewWindows = ViewWindow(self.master, self.searchResults)
+    viewWindows = ViewWindow(self.master, query_results)
     
-  def createIndex(self):
-    path = self.index_path.get()
-    deepSearch = self.index_deepSearch.get()
+  def create_file_index(self):
+    folder_path = self.index_path.get()
+    deep_search = self.index_deepSearch.get()
     fileSearch = self.index_fileSearch.get()
-    folderSearch = self.index_folderSearch.get()
-
-    folderName = os.path.basename(path)    
-    path = os.path.join(path, '**') if deepSearch else os.path.join(path, '*')
-    path = os.path.normpath(path)
-  
-    fileList = glob.glob(path, recursive = deepSearch)
-
-
-    for f in fileList:
-      fbasename = os.path.basename(f)
-      isfile = os.path.isfile(f)
-      
-      if not isfile:
-        continue
-        
-      if fbasename in self.index_db:
-        self.index_db[fbasename].append(f)
-      else:
-        self.index_db[fbasename] = [f]
-
-    self.index_exist.set('Status: created from ' + folderName)
-    ## Actions
-    # Active Search button
-    self.notebook.tab(1, state = 'normal')
+    n_files = 0
+    
+    if not folder_path == '':
+      self.finder.build_index(folder_path, deep_search)
+      n_files = len(self.finder)
+    
+    state = 'normal' if n_files > 0 else 'disabled'
+    self.notebook.tab(1, state = state)
+    
+    self.index_exist.set('Status: {} files found'.format(n_files))
     
 class ViewWindow(tk.Toplevel):
   
-  def __init__(self, master, searchResults):
+  def __init__(self, master, search_results):
     # Variables
-    self.searchResults = searchResults
-    self.nQueries, self.nFoundQueries, self.nFoundItems, self.nDuplicates = self._stats(searchResults)
+    self.search_results = search_results
+    self.nQueries, self.nFoundQueries, self.nFoundItems, self.nDuplicateNames, self.nDuplicateItems = self._stats(search_results)
 
     # Windows
     self.top =  tk.Toplevel(master)
@@ -192,24 +163,24 @@ class ViewWindow(tk.Toplevel):
     self.top.resizable(True, True)
     self.top.focus()
     
-  def _stats(self, searchResults):
-    nQueries = len(searchResults)
+  def _stats(self, search_results):
+    nQueries = len(search_results)
     nFoundQueries = 0
     nFoundItems = 0
-    nDuplicates = 0
-    fnameList = list()
-    for query, fileList in searchResults:
-      currentFnameList = [os.path.basename(f) for f in fileList]
-      fnameList = fnameList + currentFnameList
-  
-      fileListLen = len(fileList)
-      nFoundItems+= fileListLen
-      if fileListLen > 0:
-        nFoundQueries += 1
-    nFiles = len(fnameList)
-    nUniqueFiles = len(set(fnameList))
-    nDuplicates = nFiles - nUniqueFiles
-    return (nQueries, nFoundQueries, nFoundItems, nDuplicates)
+    nDuplicateItems = 0
+    nDuplicateNames = 0
+    
+    for query, query_results in search_results:
+      nFoundQueries += 1 if len(query_results) > 0 else 0
+      
+      for filename, path_list in query_results.items():
+        nFoundItems+= len(path_list)
+
+        if len(path_list) > 1:
+          nDuplicateNames += 1
+          nDuplicateItems+= len(path_list)
+            
+    return (nQueries, nFoundQueries, nFoundItems, nDuplicateNames, nDuplicateItems)
     
   def create_widgets(self):
     frame_toolbar = tk.Frame(self.top, borderwidth = 2)
@@ -244,36 +215,39 @@ class ViewWindow(tk.Toplevel):
    # style = ttk.Style()
    # style.configure("mystyle.Treeview.Heading", font=('Calibri', 13,'bold'))
     self.tree = ttk.Treeview(frame, style="mystyle.Treeview")
-    self.tree['columns'] = ('basename', 'fPath', 'query', 'queryID')
+    self.tree['columns'] = ('queryID', 'query', 'basename', 'fPath')
     
     self.tree.column('#0', minwidth = minwidth, stretch=True, anchor=tk.W)
+    self.tree.column('queryID', minwidth = minwidth, stretch =True)
+    self.tree.column('query', minwidth = minwidth, stretch =True)
     self.tree.column('basename', minwidth = minwidth, stretch =True)
     self.tree.column('fPath', minwidth = minwidth, stretch =True)
-    self.tree.column('query', minwidth = minwidth, stretch =True)
-    self.tree.column('queryID', minwidth = minwidth, stretch =True)
     
     self.tree.heading('#0', text = 'ItemID', anchor=tk.W)
+    self.tree.heading('queryID', text= 'QueryID', anchor=tk.W)
+    self.tree.heading('query', text= 'Query', anchor=tk.W)
     self.tree.heading('basename', text= 'Name', anchor=tk.W)
     self.tree.heading('fPath', text= 'Path', anchor=tk.W)
-    self.tree.heading('query', text= 'Query', anchor=tk.W)
-    self.tree.heading('queryID', text= 'QueryID', anchor=tk.W)
-
 
     itemID = 0
     queryID = 0
-    for query, fileList in self.searchResults:
-      queryID+=1
-      if len(fileList) == 0:
-        itemID+=1
-        self.tree.insert('', 'end', text = itemID, values = ('', '', query, queryID), tags = ('red',))
-        
-      for fPath in fileList:
-        itemID+=1
-        basename = os.path.basename(fPath)
-        self.tree.insert('', 'end', text = itemID, values = (basename, fPath, query, queryID), tags = ('green',))
+    for query, query_results in self.search_results:
+      queryID += 1
 
-    self.tree.tag_configure('red', background = "red")
-    self.tree.tag_configure('green', background = "green")
+      if len(query_results) == 0:
+        itemID+=1
+        self.tree.insert('', 'end', text = itemID, values = (queryID, query, '', ''), tags = ('red',))
+        continue
+        
+      for filename, path_list in query_results.items():
+        tags = ('duplicate', ) if len(path_list) > 1 else tuple()
+        for path in path_list:
+          itemID+=1          
+          self.tree.insert('', 'end', text = itemID, values = (queryID, query, filename, path), tags = tags)
+
+    self.tree.tag_configure('red', background = "#ffc6c4")
+    self.tree.tag_configure('duplicate', background = "#FFFFE0")
+
     self.tree.pack(fill= tk.BOTH, expand = True, side= tk.LEFT, padx = (2,0), pady = 2)
     
     ## Add Scrollbar
@@ -296,22 +270,26 @@ class ViewWindow(tk.Toplevel):
     label2 = tk.Label(frame, text = 'Found queries: ')
     label3 = tk.Label(frame, text = 'Found items: ')
     label4 = tk.Label(frame, text = 'Duplicate names: ')
-    
+    label5 = tk.Label(frame, text = 'Duplicate items: ')
+
     stat1 = tk.Label(frame, text = '%d'%(self.nQueries))
     stat2 = tk.Label(frame, text = '%d'%(self.nFoundQueries))
     stat3 = tk.Label(frame, text = '%d'%(self.nFoundItems))
-    stat4 = tk.Label(frame, text = '%d'%(self.nDuplicates))
+    stat4 = tk.Label(frame, text = '%d'%(self.nDuplicateNames))
+    stat5 = tk.Label(frame, text = '%d'%(self.nDuplicateItems))
     
     ## Layout
     label1.grid(row = 1, column = 0, sticky = tk.E)
     label2.grid(row = 2, column = 0, sticky = tk.E)
     label3.grid(row = 3, column = 0, sticky = tk.E)
     label4.grid(row = 4, column = 0, sticky = tk.E)
+    label5.grid(row = 5, column = 0, sticky = tk.E)
     
     stat1.grid(row = 1, column = 1, sticky = tk.E)
     stat2.grid(row = 2, column = 1, sticky = tk.E)
     stat3.grid(row = 3, column = 1, sticky = tk.E)
     stat4.grid(row = 4, column = 1, sticky = tk.E)
+    stat5.grid(row = 5, column = 1, sticky = tk.E)
     
   def open_location(self):
     if platform.system() == 'Windows':
@@ -326,7 +304,7 @@ class ViewWindow(tk.Toplevel):
     with open(logPath, mode = 'w', newline='') as csvfile:
       spamwriter = csv.writer(csvfile, delimiter = ',')
       itemList = self._get_selection()
-      spamwriter.writerow(('itemID', 'Name', 'Path', 'Query', 'queryID'))
+      spamwriter.writerow(('itemID', 'QueryID','Query','Name', 'Path'))
       for itemValues in itemList:
         spamwriter.writerow(itemValues)
  
@@ -336,7 +314,7 @@ class ViewWindow(tk.Toplevel):
     if dstPath == '':
       return None
     itemList = self._get_selection()
-    for itemID, fname, fsrc, query, queryID in itemList:
+    for itemID, queryID, query, fname, fsrc in itemList:
       if fname == '':
         continue
       currentDstPath = dstPath
