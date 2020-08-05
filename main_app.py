@@ -292,10 +292,14 @@ class ViewWindow(tk.Toplevel):
     stat5.grid(row = 5, column = 1, sticky = tk.E)
     
   def open_location(self):
-    if platform.system() == 'Windows':
-      for item in self.tree.selection():
-        fpath = self.tree.item(item, 'values')[1]
+    for item in self.tree.selection():
+      
+      fpath = self.tree.item(item, 'values')[3]
+      if platform.system() == 'Windows':
         subprocess.run(['explorer', '/select,', fpath])
+      elif platform.system() == 'Linux':
+        print(fpath)
+        subprocess.run(['nautilus', fpath])
 
   def save_log(self):
     logPath = filedialog.asksaveasfilename(title = 'Save log', initialfile = 'log.csv', filetypes = (("csv files","*.csv"),("all files","*.*")))
