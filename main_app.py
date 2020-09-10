@@ -296,6 +296,7 @@ class ViewWindow(tk.Toplevel):
       
       fpath = self.tree.item(item, 'values')[3]
       if platform.system() == 'Windows':
+        fpath = os.path.normpath(fpath)
         subprocess.run(['explorer', '/select,', fpath])
       elif platform.system() == 'Linux':
         print(fpath)
