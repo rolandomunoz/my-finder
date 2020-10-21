@@ -16,4 +16,4 @@ setup(name = "finder",
   version = "0.1",
   description = "My GUI application!",
   options = {"build_exe": build_exe_options},
-  executables = [Executable("main_app.py", base=base)])
+  executables = [Executable("main_app.py", base=base, icon='img/mpfn.ico')])
