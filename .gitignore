@@ -1,1 +1,3 @@
 finder/__pycache__
+build/
+dist/
