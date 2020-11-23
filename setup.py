@@ -16,4 +16,4 @@ setup(name = "FinderMP",
   version = "0.1",
   description = "FinderMP!",
   options = {"build_exe": build_exe_options},
-  executables = [Executable("finder.py", base=base, icon='img/binoculars.ico')])
+  executables = [Executable("finder-gui.py", base=base, targetName='FinderMP.exe', icon='img/binoculars.ico')])
