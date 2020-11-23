@@ -21,7 +21,7 @@ class Finder(tk.Frame):
   def app_config(self):
     self.master.title('Finder-MP')
     if platform.system() == 'Windows':
-      self.master.iconbitmap('img/mpfn.ico')
+      self.master.iconbitmap('img/binoculars.ico')
     #self.master.geometry('480x300')
     self.master.resizable(False, False)
   

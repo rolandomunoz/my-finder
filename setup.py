@@ -12,8 +12,8 @@ base = None
 if sys.platform == "win32":
   base = "Win32GUI"
 
-setup(name = "finder",
+setup(name = "FinderMP",
   version = "0.1",
-  description = "My GUI application!",
+  description = "FinderMP!",
   options = {"build_exe": build_exe_options},
-  executables = [Executable("main_app.py", base=base, icon='img/mpfn.ico')])
+  executables = [Executable("finder.py", base=base, icon='img/binoculars.ico')])
