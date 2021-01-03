@@ -59,7 +59,7 @@ class IndexTab(wx.Panel):
     create_file_list_btn = wx.Button(self, wx.ID_ANY, label = 'Generar lista')
     check_sha256_btn = wx.Button(self, wx.ID_ANY, label='Validar SHA256')
     create_sha256_list_btn = wx.Button(self, wx.ID_ANY, 'Generar SHA256')
-    
+
     self.status_bar = wx.StatusBar(self, wx.ID_ANY)
 
     # Binds
@@ -67,10 +67,10 @@ class IndexTab(wx.Panel):
     self.Bind(wx.EVT_BUTTON, self.clear_all, self.clear_all_btn)
     self.Bind(wx.EVT_BUTTON, self.update, self.update_btn)
     self.Bind(wx.EVT_BUTTON, self.summary, summary_btn)
-    self.Bind(wx.EVT_BUTTON, self.create_string_list, create_file_list_btn)   
-    self.Bind(wx.EVT_BUTTON, self.check_sha256_files, check_sha256_btn)   
-    self.Bind(wx.EVT_BUTTON, self.create_sha256_list, create_sha256_list_btn)   
-    
+    self.Bind(wx.EVT_BUTTON, self.create_string_list, create_file_list_btn)
+    self.Bind(wx.EVT_BUTTON, self.check_sha256_files, check_sha256_btn)
+    self.Bind(wx.EVT_BUTTON, self.create_sha256_list, create_sha256_list_btn)
+
     # Layout
     main_sizer = wx.BoxSizer(wx.VERTICAL)
     panel = wx.BoxSizer(wx.HORIZONTAL)
@@ -99,25 +99,28 @@ class IndexTab(wx.Panel):
 
   def create_string_list(self, event):
     pass
- 
+
   def create_sha256_list(self, event):
-    pass
+    for fname, paths in self.index_obj.index.items():
+      for path in paths:
+        print(fname, '\t',finder.calculate_sha256(path))
+    print('Finalizado')
 
   def check_sha256_files(self, event):
     original_file_str = 'Archivos validados'
     modified_file_str = 'Archivos modificados'
     missing_pair_str = 'Archivos sin pareja'
-  
+
     original_file_counter = 0
     modified_file_counter = 0
     missing_pair_counter = 0
-    
+
     # Get the filenames with SHA256 extension
     pattern = '*SHA256'
     fnames = self.index_obj.index.keys()
     sha256_names = [fname for fname in fnames if fnmatch.fnmatchcase(fname, pattern)]
-    
-    # Check 
+
+    # Check
     for sha256_name in sha256_names:
       sha256_paths = self.index_obj.index[sha256_name]
       for sha256_path in sha256_paths:
@@ -130,13 +133,13 @@ class IndexTab(wx.Panel):
             modified_file_counter+=1
         else:
           missing_pair_counter+=1
-            
+
     table = ((original_file_str, original_file_counter), (modified_file_str, modified_file_counter), (missing_pair_str, missing_pair_counter))
 
     with dialogs.TableInfoDialog(self, wx.ID_ANY, 'Validación de archivos SHA256', 'Resumen:', ['Concepto', 'Casos']) as dlg:
       dlg.add_data(table)
       dlg.ShowModal()
-     
+
   def summary(self, event):
     extension_stat = dict()
     for filename, paths in self.index_obj.index.items():
