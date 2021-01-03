@@ -2,19 +2,19 @@ import os
 import glob
 import fnmatch
 
-class FileIndex:
+class Index:
 
   def __init__(self):
     self.index = dict()
-    self._number_of_files = 0
-
-  def build_index(self, folder_path, recursive):
-    self.index = self._create(folder_path, recursive = recursive)
+    self.number_of_files = 0
 
   def __len__(self):
-    return self._number_of_files
+    return self.number_of_files
   
-  def _create(self, folder_path, recursive = False):
+  def get_number_of_files(self):
+    return len(self)
+
+  def create(self, folder_path, recursive= True, initialize= True):
     ''''Create an index of all files in a folder path
 
     Parameters:
@@ -22,11 +22,11 @@ class FileIndex:
     recursive (boolean):Search in subfolders as well
     
     Returns:
-    dict:a dictionary containing filenames as keys and diretories as values
+    dict:A dictionary containing filenames as keys and diretories as values
 
-   '''
-    index = dict()
-    self._number_of_files = 0
+    '''
+    if initialize:
+      self.clear()
     folder_name = os.path.basename(folder_path)
     wild_card = '**' if recursive else '*'
     path = os.path.join(folder_path, wild_card)
@@ -39,45 +39,79 @@ class FileIndex:
       if not isfile:
         continue
       
-      self._number_of_files+= 1
-      if fbasename in index:
-        index[fbasename].append(f)
+      self.number_of_files+= 1
+      if fbasename in self.index:
+        self.index[fbasename].append(f)
       else:
-        index[fbasename] = [f]
-    return index
+        self.index[fbasename] = [f]
 
-  def clear_index(self):
+  def append(self, folder_path, recursive= True):
+    ''''Append the files from a folder to an existing index
+
+    Parameters:
+    folder_path (string):The folder path where files are stored
+    recursive (boolean):Search in subfolders as well
+    
+    Returns:
+    dict:A dictionary containing filenames as keys and diretories as values
+
+    '''
+    self.create(folder_path, recursive= recursive, initialize=False)
+
+  def clear(self):
     self.index = dict()
+    self.number_of_files = 0
 
-  def find_paths_by_pattern_list(self, pattern_list):
+  def search(self, search_list):
     finder = Finder(self.index)
-    return finder.find_paths_by_pattern_list(pattern_list)
+    return finder.search_by_list(search_list)
+
+  def inverse_search(self, search_list):
+    finder = Finder(self.index)
+    return finder.inverse_search_by_list(search_list)
     
 class Finder:
   
-  def __init__(self, dict_index):
-    self.index = dict_index
+  def __init__(self, index):
+    self.index = index
 
-  def find_paths_by_pattern_list(self, pattern_list):
-    ''''Find paths given a pattern list where each item is a pattern
+  def inverse_search_by_list(self, pattern_list):
+    ''''Given a patterns list, find all paths that do not match that list
 
     Parameters:
     pattern_list (list):a list of pattern
 
     Returns:
-    dict:a list containing a tuple where the first element is the query ande the second is a dictionary containing all filenames and their directories. If a query is not found, then an empty dictionary is returned.
+    dict:a dictionary containing the unmatched paths {filename}
 
    '''
-    results = list()
+    new_index = self.index.copy()
     for pattern in pattern_list:
-      fname_list = self._get_list_of_filenames(pattern)
-      search_content = {fname:self._get_list_of_paths(fname) for fname in fname_list}
-      results.append((pattern, search_content))
-      
-    return results
+      fname_list = self.get_filenames(pattern)
+      for fname in fname_list:
+        new_index.pop(fname)
+    return new_index
+    
+  def search_by_list(self, pattern_list):
+    ''''Find paths given a pattern list
+
+    Parameters:
+    pattern_list (list):a list of pattern
+
+    Returns:
+    dict:a list of tuples where [(pattern, {filename1:[path1, path2, path3]}), ...] or (pattern, {})
+
+    '''
+    search_results = SearchResults()
+    for pattern in pattern_list:
+      fname_list = self.get_filenames(pattern)
+      results = {fname:self.get_paths(fname) for fname in fname_list}
+      search_item = SearchItem(pattern, results)
+      search_results.append(search_item)
+    return search_results
   
-  def _get_list_of_paths(self, filename):
-    ''''Given an index dictionary (filename:[paths]), get a path list based on a filename
+  def get_paths(self, filename):
+    ''''Given an index dictionary list (filename:[paths]), get a path list based on a filename
 
     Parameters:
     filename (string):a filename
@@ -86,10 +120,12 @@ class Finder:
     list:a list of all paths where the filename is located
 
    '''
-    return self.index[filename]
+    if filename in self.index:
+      return self.index[filename]
+    return []
 
-  def _get_list_of_filenames(self, pattern):
-    ''''Given an index dictionary (filename:[paths]), get all filenames(keys) that match a pattern
+  def get_filenames(self, pattern):
+    ''''Given an index dictionary list (filename:[paths]), get all filenames(keys) that match a pattern
 
     Parameters:
     filename (string):a filename. You can use wildcards * ? []
@@ -97,15 +133,127 @@ class Finder:
     Returns:
     list:a list of all 
 
-   '''
+    '''
     return fnmatch.filter(self.index.keys(), pattern)
+
+class SearchItem:
+  '''
+  pattern -> filename1
+                        -> path1
+          -> filename2  
+                        -> path2
+                        -> path3
+          -> filename3
+                        -> path4
+  '''
+    
+  def __init__(self, search_pattern = '', search_results = {}):
+    self._search_pattern = search_pattern
+    self._search_results = search_results
+    self._search_id = None
+    self._status = self.update_status()
+    
+  def __iter__(self):
+    return iter(self._search_results)
+    
+  def paths(self):
+    return iter(self._search_results.values())
+  
+  def filenames(self):
+    return iter(self._search_results.keys())
+
+  def result_items(self):
+    return iter(zip(self.filenames(), self.paths()))
+   
+  def update_status(self):
+    MISSING = 0
+    ONE_TO_ONE = 1
+    ONE_TO_MANY = 2
+    
+    results_len = len(self._search_results)
+    
+    if results_len == 0:
+      return MISSING
+    elif results_len == 1:
+      return ONE_TO_ONE 
+    elif results_len > 1:
+      return ONE_TO_MANY       
+
+  def set_id(self, search_id):
+    self._search_id = search_id
+    
+  def set_search_item(self, pattern, search_results):
+    self._pattern = pattern
+    self._search_results = search_results
+    self._status = self.update_status()
+    
+  def get_total_number_of_paths(self):
+    paths_counter = 0
+    for filename, paths in self.result_items():
+      for path in paths:
+        paths_counter+=1
+    return paths_counter
+  
+  def get_number_of_filenames(self):
+    return len(self._search_results)
+
+  def get_all_paths(self):
+    paths = list()
+    for filename, temp_paths in self.result_items():
+      paths.extend(temp_paths)
+    return paths
+    
+  def get_paths(self, filename):
+    try:
+      return self._search_results[filename]
+    except:
+      return []
+    
+  def get_filenames(self):
+    filenames = list()
+    for filename, paths in self.result_items():
+      filenames.append(filename)
+    return filenames
+  
+  def get_search_pattern(self):
+    return self._search_pattern
+  
+  def get_status(self):
+    return self._status
+  
+  def get_id(self):
+    return self._search_id
+  
+  def get_duplicates(self):
+    duplicate_cases = list()
+    for filename, paths in self.result_items():
+      if len(paths) > 1:
+        duplicate_cases.append((self._search_id, filename))
+    return duplicate_cases
+        
+class SearchResults:
+
+  def __init__(self):
+    self._results = list()
+    self._count = 0
+  
+  def __iter__(self):
+    return iter(self._results)
+      
+  def append(self, search_item_obj):
+    self._count+= 1
+    search_item_obj.set_id(self._count)
+    self._results.append(search_item_obj)
+
+  def duplicate_cases(self):
+    pass
     
 if __name__ == '__main__':
-  folder_path = '/home/rolando/Documents/Repositorio-ADLP/ADLP'
-  recursive = True
-  queryList = ['f1_ac_abrir_tierra_con_pico*', '*casa*', 'oeatoaeoatretao']
+  folder_path = r'C:\Users\lab\Desktop\desktop'
+  queryList = ['2a8b7d6b-6f7b-4ec3-b77b-dcdba7ca0ba7.jfif', '*txt', 'oeatoaeoatretao']
   
-  index = FileIndex()
-  index.build_index(folder_path, recursive)
-  a = index.find_paths_by_pattern_list(queryList)
-  print(a)
+  index = Index()
+  index.create(folder_path)
+  a = index.search(queryList)
+  for b in a:
+    print(b)
