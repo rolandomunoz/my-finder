@@ -7,18 +7,25 @@ import argparse
 import hashlib
 
 def check_sha256_file(sha256_path, path):
-  freader = SHA256FileReader(sha256_path)
+  freader = HashFileReader(sha256_path)
   sha256 = freader.get_sha256()
 
-  fcalc = SHA256Calculator(path)
+  fcalc = HashCalculator(path)
   sha256_calc = fcalc.get_sha256()
   
   if sha256 == sha256_calc:
    return True
   else:
     return False
+    
+def calculate_sha256(path):
+  '''
+  Given a file, calculate its SHA256 code
+  '''
+  fcalc = HashCalculator(path)
+  return fcalc.get_sha256()
 
-class SHA256Calculator:
+class HashCalculator:
 
   def __init__(self, path):
     self.calculate(path)
@@ -34,7 +41,7 @@ class SHA256Calculator:
   def get_sha256(self):
     return self.sha256
     
-class SHA256FileReader:
+class HashFileReader:
   
   def __init__(self, path):
     self.parse(path)
