@@ -101,9 +101,12 @@ class IndexTab(wx.Panel):
     pass
 
   def create_sha256_list(self, event):
+    counter=0
     for fname, paths in self.index_obj.index.items():
       for path in paths:
-        print(fname, '\t',finder.calculate_sha256(path))
+        counter+=1
+        
+        print(counter, '\t',fname, '\t',finder.calculate_sha256(path))
     print('Finalizado')
 
   def check_sha256_files(self, event):
@@ -317,7 +320,7 @@ class SearchTab(wx.Panel):
     self.SetSizer(main_sizer)
 
   def search_and_replace_items(self, event):
-    dlg = dialogs.FindAndReplace(self, self._PATTERN_COLUMN)
+    dlg = dialogs.FindAndReplaceDialog(self, self._PATTERN_COLUMN)
     dlg.Show()
 
   def search_all(self, event):

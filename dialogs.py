@@ -45,7 +45,7 @@ class ClipboardDialog(wx.Dialog):
     self.parent.list_ctrl.copy_to_clipboard(column_n)
     self.Destroy()
 
-class FindAndReplace(wx.Dialog):
+class FindAndReplaceDialog(wx.Dialog):
 
   def __init__(self, parent, column_n, *args, **kwargs):
     super().__init__(parent, title= 'Buscar y remplazar', *args, **kwargs)
