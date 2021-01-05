@@ -43,6 +43,7 @@ class FinderFrame(wx.Frame):
 
     # Bind
     self.Bind(wx.EVT_MENU, self.on_about, about_item)
+    self.Bind(wx.EVT_MENU, self.on_quit, quit_item)
     
     # Layout
     sizer = wx.BoxSizer(wx.VERTICAL)
@@ -62,10 +63,11 @@ class FinderFrame(wx.Frame):
     aboutInfo.AddDeveloper('Rolando Muñoz Aramburú (OPERIT-Ministerio Público)')
     aboutInfo.SetIcon(self._ICON)
     aboutInfo.SetLicence('GNU General Public License v3 (GPLv3)')
-
     wx.adv.AboutBox(aboutInfo)
 
-
+  def on_quit(self, event):
+    self.Close()
+    
 class IndexTab(wx.Panel):
 
   def __init__(self, parent, index_obj, *args, **kwargs):
