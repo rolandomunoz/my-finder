@@ -29,8 +29,8 @@ class FinderFrame(wx.Frame):
     
     index_obj = finder.Index()
 
-    panel = wx.Panel(self)
-    notebook = wx.Notebook(panel, style = wx.NB_FIXEDWIDTH)
+    self.panel = wx.Panel(self)
+    notebook = wx.Notebook(self.panel, style = wx.NB_FIXEDWIDTH)
 
     indexTab = IndexTab(notebook, index_obj)
     notebook.AddPage(indexTab, 'Índice')
@@ -44,11 +44,14 @@ class FinderFrame(wx.Frame):
     # Bind
     self.Bind(wx.EVT_MENU, self.on_about, about_item)
     self.Bind(wx.EVT_MENU, self.on_quit, quit_item)
+    self.Bind(wx.EVT_MENU, self.on_show_dir_index, create_index_from_dir_item)
+    self.Bind(wx.EVT_MENU, self.on_show_list_index, create_index_from_list_item)
     
     # Layout
     sizer = wx.BoxSizer(wx.VERTICAL)
     sizer.Add(notebook, 1, wx.ALL|wx.EXPAND, 5)
-    panel.SetSizer(sizer)
+    self.panel.SetSizer(sizer)
+    self.panel.Hide()
     self.Layout()
     self.Show()
 
@@ -67,6 +70,13 @@ class FinderFrame(wx.Frame):
 
   def on_quit(self, event):
     self.Close()
+
+  def on_show_dir_index(self, event):
+    self.panel.Show()
+    self.Layout()
+  
+  def on_show_list_index(self, event):
+    pass
     
 class IndexTab(wx.Panel):
 
