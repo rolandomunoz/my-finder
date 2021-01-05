@@ -1,4 +1,5 @@
 import wx
+import wx.adv
 import wxmod
 import finder
 import os
@@ -12,7 +13,20 @@ class FinderFrame(wx.Frame):
 
   def __init__(self, *args, **kwargs):
     super().__init__(None, title = 'BuscadorMP', size=(800,400), *args, **kwargs)
+    
+    # Widgets
+    new_menu = wx.Menu()
+    about_item =new_menu.Append(wx.ID_ANY, 'Acerca')
+    new_menu.AppendSeparator()
+    create_index_from_dir_item = new_menu.Append(wx.ID_ANY, 'Crear nuevo índice desde fólder')
+    create_index_from_list_item = new_menu.Append(wx.ID_ANY, 'Crear nuevo índice desde lista')
+    new_menu.AppendSeparator()
+    quit_item = new_menu.Append(wx.ID_EXIT, 'Salir')
 
+    menu_bar = wx.MenuBar()
+    menu_bar.Append(new_menu, '&Menú')
+    self.SetMenuBar(menu_bar)
+    
     index_obj = finder.Index()
 
     panel = wx.Panel(self)
@@ -24,13 +38,33 @@ class FinderFrame(wx.Frame):
     searchTab = SearchTab(notebook, index_obj)
     notebook.AddPage(searchTab, 'Búsqueda')
 
-    self.SetIcon(wx.Icon(os.path.join('img', 'binoculars.ico')))
+    self._ICON = wx.Icon(os.path.join('img', 'binoculars.ico'))
+    self.SetIcon(self._ICON)
 
+    # Bind
+    self.Bind(wx.EVT_MENU, self.on_about, about_item)
+    
+    # Layout
     sizer = wx.BoxSizer(wx.VERTICAL)
     sizer.Add(notebook, 1, wx.ALL|wx.EXPAND, 5)
     panel.SetSizer(sizer)
     self.Layout()
     self.Show()
+
+  def on_about(self, event):
+    MY_APP_VERSION_STRING = '0.9'
+    aboutInfo = wx.adv.AboutDialogInfo()
+    aboutInfo.SetName("BuscadorMP")
+    aboutInfo.SetVersion(MY_APP_VERSION_STRING)
+    aboutInfo.SetDescription("Aplicación para buscar y organizar archivos")
+    aboutInfo.SetCopyright("(C) 2019-2021")
+    aboutInfo.SetWebSite("https://github.com/rolandomunoz/finder-mp")
+    aboutInfo.AddDeveloper('Rolando Muñoz Aramburú (OPERIT-Ministerio Público)')
+    aboutInfo.SetIcon(self._ICON)
+    aboutInfo.SetLicence('GNU General Public License v3 (GPLv3)')
+
+    wx.adv.AboutBox(aboutInfo)
+
 
 class IndexTab(wx.Panel):
 
