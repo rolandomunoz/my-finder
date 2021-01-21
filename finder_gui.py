@@ -18,13 +18,13 @@ class FinderFrame(wx.Frame):
     new_menu = wx.Menu()
     about_item =new_menu.Append(wx.ID_ANY, 'Acerca')
     new_menu.AppendSeparator()
-    create_index_from_dir_item = new_menu.Append(wx.ID_ANY, 'Crear nuevo índice desde fólder')
-    create_index_from_list_item = new_menu.Append(wx.ID_ANY, 'Crear nuevo índice desde lista')
+    create_index_from_dir_item = new_menu.AppendRadioItem(wx.ID_ANY, 'Crear nuevo índice desde fólder')
+    create_index_from_list_item = new_menu.AppendRadioItem(wx.ID_ANY, 'Crear nuevo índice desde lista')
     new_menu.AppendSeparator()
     quit_item = new_menu.Append(wx.ID_EXIT, 'Salir')
 
     menu_bar = wx.MenuBar()
-    menu_bar.Append(new_menu, '&Menú')
+    menu_bar.Append(new_menu, '&Modo')
     self.SetMenuBar(menu_bar)
     
     index_obj = finder.Index()
@@ -51,7 +51,6 @@ class FinderFrame(wx.Frame):
     sizer = wx.BoxSizer(wx.VERTICAL)
     sizer.Add(notebook, 1, wx.ALL|wx.EXPAND, 5)
     self.panel.SetSizer(sizer)
-    self.panel.Hide()
     self.Layout()
     self.Show()
 
@@ -76,7 +75,8 @@ class FinderFrame(wx.Frame):
     self.Layout()
   
   def on_show_list_index(self, event):
-    pass
+    self.panel.Hide()
+    self.Layout()
     
 class IndexTab(wx.Panel):
 
