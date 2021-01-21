@@ -16,4 +16,4 @@ setup(name = "BuscadorMP",
   version = "0.1",
   description = "Busca y gestiona archivos",
   options = {"build_exe": build_exe_options},
-  executables = [Executable("finder_gui.py", base=base, targetName='BuscadorMP.exe', icon=r'img\binoculars.ico')])
+  executables = [Executable("finder_gui.py", shortcutName='BuscadorMP',shortcutDir='StartMenuFolder', base=base, target_name='BuscadorMP.exe', icon=r'img\binoculars.ico')])
