@@ -114,7 +114,6 @@ class FilesTab(wx.Panel):
     clipboard_btn = wx.Button(self, wx.ID_ANY, 'Copiar tabla')
     self.copy_btn = wx.Button(self, wx.ID_ANY, 'Copiar')
     self.ecopy_btn = wx.Button(self, wx.ID_ANY, 'Copiar (e.)')
-    self.ecopy_btn.Enable(False)
     self.move_btn = wx.Button(self, wx.ID_ANY, 'Mover')
     self.remove_btn = wx.Button(self, wx.ID_ANY, 'Eliminar')
     self.remove_btn.Enable(False)
@@ -127,6 +126,7 @@ class FilesTab(wx.Panel):
     # Binds
     self.Bind(wx.EVT_BUTTON, self.copy_to_clipboard, clipboard_btn)
     self.Bind(wx.EVT_BUTTON, self.copy_files, self.copy_btn)
+    self.Bind(wx.EVT_BUTTON, self.ecopy_files, self.ecopy_btn)
     self.Bind(wx.EVT_BUTTON, self.move_files, self.move_btn)
 
     self.Bind(wx.EVT_MENU, self.open_location, self.open_location_command)
@@ -202,16 +202,10 @@ class FilesTab(wx.Panel):
         shutil.move(fsrc, new_path)
 
   def ecopy_files(self, event):
-    with wx.DirDialog(None, 'Selecciona la dirección donde deseas copiar tus archivos', "",
-      wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST) as dlg:
+    file_paths = self.list_ctrl.GetAllItemsText(self._PATH_COLUMN)
+    with dialogs.EncapsulatedCopy(None, file_paths) as dlg:
       if not dlg.ShowModal() == wx.ID_OK:
         return
-
-      new_path = dlg.GetPath()
-      file_paths = self.list_ctrl.GetAllItemsText(self._PATH_COLUMN)
-      search_ids = self.list_ctrl.GetAllItemsText(self._ID_COLUMN)
-      for path, search_id in zip(file_paths, search_ids):
-        pass
 
   def copy_files(self, event):
     with wx.DirDialog(None, 'Selecciona la dirección donde deseas copiar tus archivos', "",
