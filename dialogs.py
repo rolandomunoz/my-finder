@@ -283,3 +283,113 @@ class ExtensionSummary(wx.Dialog):
 
   def copy_to_clipboard(self, event):
     self.list_ctrl.copy_to_clipboard(-1)
+
+class EncapsulatedCopy(wx.Dialog):
+  
+  def __init__(self, parent, data, *args, **kwargs):
+    super().__init__(parent, title='Copia encapsulada', *args, **kwargs)
+    self.start_number = 1
+    self.step_number = 1
+    self.counter = 0
+    self.prefix = ''
+    self.suffix = ''
+    
+    self.data = data
+    self.init_GUI()
+
+  def init_GUI(self):
+    # Widgets
+    start_label = wx.StaticText(self, wx.ID_ANY, 'Inicio:')
+    step_label = wx.StaticText(self, wx.ID_ANY, 'Saltar:')
+    prefix_label = wx.StaticText(self, wx.ID_ANY, 'Prefijo')
+    suffix_label = wx.StaticText(self, wx.ID_ANY, 'Sufijo:')
+    
+    self.start_number = wx.SpinCtrl(self, wx.ID_ANY, initial = self.start_number)
+    self.step_number = wx.SpinCtrl(self, wx.ID_ANY, initial = self.step_number)
+    self.prefix_text = wx.TextCtrl(self, wx.ID_ANY, '')
+    self.suffix_text = wx.TextCtrl(self, wx.ID_ANY, '')
+
+    self.basename_text = wx.TextCtrl(self, wx.ID_ANY, str(self.start_number))
+    self.basename_text.SetEditable(False)
+    
+    copy_btn = wx.Button(self, wx.ID_OK, 'Copiar')
+    cancel_btn = wx.Button(self, wx.ID_CANCEL, 'Cancelar')
+    
+    # Binds
+    self.prefix_text.Bind(wx.EVT_TEXT, self.add_prefix)
+    self.suffix_text.Bind(wx.EVT_TEXT, self.add_suffix)
+    self.start_number.Bind(wx.EVT_SPINCTRL, self.update_counter)
+    copy_btn.Bind(wx.EVT_BUTTON, self.ecopy)
+    
+    # Layout
+    gs = wx.GridSizer(rows=4, cols=2, vgap=0, hgap=0)
+    gs.AddMany([(start_label, 0, wx.EXPAND), (self.start_number, 0, wx.EXPAND),
+    (step_label, 0, wx.EXPAND), (self.step_number, 0, wx.EXPAND),
+    (prefix_label, 0, wx.EXPAND), (self.prefix_text, 0, wx.EXPAND),
+    (suffix_label, 0, wx.EXPAND), (self.suffix_text, 0, wx.EXPAND)]
+    )
+
+    config_section = wx.StaticBoxSizer(wx.VERTICAL, self, 'Configuración:')
+    config_section.Add(gs, wx.EXPAND)
+
+    results_section = wx.StaticBoxSizer(wx.VERTICAL, self, 'Resultado:')
+    results_section.Add(self.basename_text, 0, wx.EXPAND)
+    
+    button_panel = wx.BoxSizer(wx.HORIZONTAL)
+    button_panel.Add(cancel_btn, wx.ALL, 5)
+    button_panel.Add(copy_btn, wx.ALL, 5)
+
+    main_sizer = wx.BoxSizer(wx.VERTICAL)
+    main_sizer.Add(config_section, 0, wx.EXPAND|wx.RIGHT|wx.LEFT, 5)
+    main_sizer.Add(results_section, 0, wx.EXPAND|wx.RIGHT|wx.LEFT, 5)
+    main_sizer.Add(button_panel, 0, wx.ALIGN_RIGHT|wx.ALL, 5)
+    
+    main_sizer.SetSizeHints(self)
+    self.SetSizer(main_sizer)
+  
+  def update_counter(self, event):
+    self.counter = self.start_number.GetValue()
+    self.counter_str = str(self.counter)
+    self.update_basename()
+    
+  def add_prefix(self, event):
+    self.prefix= self.prefix_text.GetValue()
+    self.update_basename()
+
+  def add_suffix(self, event):
+    self.suffix= self.suffix_text.GetValue()
+    self.update_basename()
+    
+  def update_basename(self):
+    new_counter = self.prefix + self.counter_str + self.suffix
+    self.basename_text.SetValue(new_counter)
+  
+  def ecopy(self, event):
+    root_path = self.get_folder_path()
+    if root_path == None:
+      return
+    
+    for fsrc in self.data:
+      new_folder_name = self.prefix + str(self.counter) + self.suffix
+      new_folder_path = os.path.join(root_path, new_folder_name)
+      
+      fname= os.path.basename(fsrc)
+      fdst = os.path.join(new_folder_path, fname)
+      
+      try:
+        os.mkdir(new_folder_path)
+        try:
+          shutil.copy2(fsrc, fdst)
+        except:
+          shutil.copy(fsrc, fdst)
+      except:
+        pass
+      self.counter+=1
+    self.counter = 0
+
+  def get_folder_path(self):
+    with wx.DirDialog(self, 'Selecciona la carpeta que deseas indexar', "",
+      wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST) as dlg:
+      if dlg.ShowModal() == wx.ID_OK:
+        return dlg.GetPath()
+      return
