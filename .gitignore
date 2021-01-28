@@ -3,3 +3,4 @@ finder/__pycache__
 wxmod/__pycache__
 build/
 dist/
+test/
