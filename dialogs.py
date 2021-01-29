@@ -2,6 +2,7 @@ import wx
 import wxmod
 import re
 import os
+import shutil
 
 class ClipboardDialog(wx.Dialog):
 
@@ -287,46 +288,49 @@ class ExtensionSummary(wx.Dialog):
 class EncapsulatedCopy(wx.Dialog):
   
   def __init__(self, parent, data, *args, **kwargs):
-    super().__init__(parent, title='Copia encapsulada', *args, **kwargs)
+    super().__init__(parent, title='Copia encapsulada', *args, **kwargs)   
+    self.data = data
+    data_len = len(self.data)
+    
     self.start_number = 1
-    self.step_number = 1
-    self.counter = 0
+    self.leading_zeroes = len(str(data_len))
     self.prefix = ''
     self.suffix = ''
-    
-    self.data = data
+
     self.init_GUI()
 
   def init_GUI(self):
     # Widgets
     start_label = wx.StaticText(self, wx.ID_ANY, 'Inicio:')
-    step_label = wx.StaticText(self, wx.ID_ANY, 'Saltar:')
+    leading_zeroes_label = wx.StaticText(self, wx.ID_ANY, 'Número de cifras:')
     prefix_label = wx.StaticText(self, wx.ID_ANY, 'Prefijo')
     suffix_label = wx.StaticText(self, wx.ID_ANY, 'Sufijo:')
     
-    self.start_number = wx.SpinCtrl(self, wx.ID_ANY, initial = self.start_number)
-    self.step_number = wx.SpinCtrl(self, wx.ID_ANY, initial = self.step_number)
-    self.prefix_text = wx.TextCtrl(self, wx.ID_ANY, '')
-    self.suffix_text = wx.TextCtrl(self, wx.ID_ANY, '')
-
-    self.basename_text = wx.TextCtrl(self, wx.ID_ANY, str(self.start_number))
+    self.start_number_spinctrl = wx.SpinCtrl(self, wx.ID_ANY, initial = self.start_number)
+    self.leading_zeroes_spinctrl = wx.SpinCtrl(self, wx.ID_ANY, initial = self.leading_zeroes, min=1, max=1000000)
+    self.prefix_text_spinctrl = wx.TextCtrl(self, wx.ID_ANY, '')
+    self.suffix_text_spinctrl = wx.TextCtrl(self, wx.ID_ANY, '')
+    
+    start_number_str = str(self.start_number).zfill(self.leading_zeroes)
+    self.basename_text = wx.TextCtrl(self, wx.ID_ANY, start_number_str)
     self.basename_text.SetEditable(False)
     
     copy_btn = wx.Button(self, wx.ID_OK, 'Copiar')
     cancel_btn = wx.Button(self, wx.ID_CANCEL, 'Cancelar')
     
     # Binds
-    self.prefix_text.Bind(wx.EVT_TEXT, self.add_prefix)
-    self.suffix_text.Bind(wx.EVT_TEXT, self.add_suffix)
-    self.start_number.Bind(wx.EVT_SPINCTRL, self.update_counter)
+    self.start_number_spinctrl.Bind(wx.EVT_SPINCTRL, self.update_counter)
+    self.leading_zeroes_spinctrl.Bind(wx.EVT_SPINCTRL, self.update_counter)
+    self.prefix_text_spinctrl.Bind(wx.EVT_TEXT, self.add_prefix)
+    self.suffix_text_spinctrl.Bind(wx.EVT_TEXT, self.add_suffix)
     copy_btn.Bind(wx.EVT_BUTTON, self.ecopy)
     
     # Layout
     gs = wx.GridSizer(rows=4, cols=2, vgap=0, hgap=0)
-    gs.AddMany([(start_label, 0, wx.EXPAND), (self.start_number, 0, wx.EXPAND),
-    (step_label, 0, wx.EXPAND), (self.step_number, 0, wx.EXPAND),
-    (prefix_label, 0, wx.EXPAND), (self.prefix_text, 0, wx.EXPAND),
-    (suffix_label, 0, wx.EXPAND), (self.suffix_text, 0, wx.EXPAND)]
+    gs.AddMany([(start_label, 0, wx.EXPAND), (self.start_number_spinctrl, 0, wx.EXPAND),
+    (leading_zeroes_label, 0, wx.EXPAND), (self.leading_zeroes_spinctrl, 0, wx.EXPAND),
+    (prefix_label, 0, wx.EXPAND), (self.prefix_text_spinctrl, 0, wx.EXPAND),
+    (suffix_label, 0, wx.EXPAND), (self.suffix_text_spinctrl, 0, wx.EXPAND)]
     )
 
     config_section = wx.StaticBoxSizer(wx.VERTICAL, self, 'Configuración:')
@@ -348,44 +352,53 @@ class EncapsulatedCopy(wx.Dialog):
     self.SetSizer(main_sizer)
   
   def update_counter(self, event):
-    self.counter = self.start_number.GetValue()
-    self.counter_str = str(self.counter)
+    self.start_number = self.start_number_spinctrl.GetValue()
     self.update_basename()
     
   def add_prefix(self, event):
-    self.prefix= self.prefix_text.GetValue()
+    self.prefix= self.prefix_text_spinctrl.GetValue()
     self.update_basename()
 
   def add_suffix(self, event):
-    self.suffix= self.suffix_text.GetValue()
+    self.suffix= self.suffix_text_spinctrl.GetValue()
     self.update_basename()
     
   def update_basename(self):
-    new_counter = self.prefix + self.counter_str + self.suffix
+    start_number_str = self.int_as_str(self.start_number)
+    new_counter = self.prefix + start_number_str + self.suffix
     self.basename_text.SetValue(new_counter)
   
+  def int_as_str(self, number):
+    leading_zeroes = self.leading_zeroes_spinctrl.GetValue()
+    return str(number).zfill(leading_zeroes)
+    
   def ecopy(self, event):
     root_path = self.get_folder_path()
     if root_path == None:
       return
     
+    counter = self.start_number
     for fsrc in self.data:
-      new_folder_name = self.prefix + str(self.counter) + self.suffix
+      counter_str = self.int_as_str(counter)
+      new_folder_name = self.prefix + counter_str + self.suffix
       new_folder_path = os.path.join(root_path, new_folder_name)
       
       fname= os.path.basename(fsrc)
       fdst = os.path.join(new_folder_path, fname)
       
+      # Make directories
       try:
         os.mkdir(new_folder_path)
-        try:
-          shutil.copy2(fsrc, fdst)
-        except:
-          shutil.copy(fsrc, fdst)
       except:
         pass
-      self.counter+=1
-    self.counter = 0
+
+      # Copy files
+      try:
+        shutil.copy2(fsrc, fdst)
+      except:
+        shutil.copy(fsrc, fdst)
+
+      counter+=1
 
   def get_folder_path(self):
     with wx.DirDialog(self, 'Selecciona la carpeta que deseas indexar', "",
