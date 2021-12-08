@@ -55,14 +55,14 @@ class FinderFrame(wx.Frame):
         self.Show()
 
     def on_about(self, event):
-        MY_APP_VERSION_STRING = '0.9'
+        MY_APP_VERSION_STRING = 'v1.0.0'
         aboutInfo = wx.adv.AboutDialogInfo()
-        aboutInfo.SetName("BuscadorMP")
+        aboutInfo.SetName("fonaf_Buscador")
         aboutInfo.SetVersion(MY_APP_VERSION_STRING)
         aboutInfo.SetDescription("Aplicación para buscar y organizar archivos")
         aboutInfo.SetCopyright("(C) 2019-2022")
         aboutInfo.SetWebSite("https://github.com/rolandomunoz/finder-mp")
-        aboutInfo.AddDeveloper('Rolando Muñoz Aramburú (OPERIT-Ministerio Público)')
+        aboutInfo.AddDeveloper('Rolando Muñoz Aramburú')
         aboutInfo.SetIcon(self._ICON)
         aboutInfo.SetLicence('GNU General Public License v3 (GPLv3)')
         wx.adv.AboutBox(aboutInfo)
