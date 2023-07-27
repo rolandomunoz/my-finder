@@ -1,3 +1,3 @@
-# BuscadorMP
+# Buscador
 
 Busca y organiza archivos
